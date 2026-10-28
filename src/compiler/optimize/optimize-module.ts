@@ -104,7 +104,7 @@ export const optimizeModule = async (
         ...getTerserManglePropertiesConfig(),
       };
 
-      compressOpts.inline = 2;
+      compressOpts.inline = 1;
       compressOpts.unsafe = true;
       compressOpts.unsafe_undefined = true;
     }

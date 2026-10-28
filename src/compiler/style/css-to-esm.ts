@@ -182,7 +182,9 @@ const generateTransformCssToEsm = (
     delete results.styleMap.file;
     const namespace = input.namespace ? input.namespace + ':///' : '';
     const rootDir = input.rootDir || process.cwd();
-    results.styleMap.sources = results.styleMap.sources.map((source) => namespace + path.relative(rootDir, source));
+    results.styleMap.sources = results.styleMap.sources.map((source) => {
+      return namespace + path.relative(rootDir, source).replace(/\\/g, '/');
+    });
     results.styleSourceMap = JSON.stringify(results.styleMap);
   }
   // Escape backslashes first so the escape sequences added below are not
