@@ -181,6 +181,8 @@ export const getTranspileCssConfig = (
     autoprefixer: false,
     module: compileOpts.module,
     styleImportData: compileOpts.styleImportData,
+    rootDir: compileOpts.baseUrl,
+    namespace: 'stencil',
   };
   return transformInput;
 };

@@ -177,8 +177,14 @@ const generateTransformCssToEsm = (
   results: d.TransformCssToEsmOutput,
 ): d.TransformCssToEsmOutput => {
   const s = new MagicString('');
-  results.styleSourceMap = results.styleMap ? sourceMapToDataUrl(results.styleMap) : undefined;
 
+  if (results.styleMap) {
+    delete results.styleMap.file;
+    const namespace = input.namespace ? input.namespace + ':///' : '';
+    const rootDir = input.rootDir || process.cwd();
+    results.styleMap.sources = results.styleMap.sources.map((source) => namespace + path.relative(rootDir, source));
+    results.styleSourceMap = JSON.stringify(results.styleMap);
+  }
   // Escape backslashes first so the escape sequences added below are not
   // re-escaped afterwards. Escaping backslashes last would turn the
   // escaped backtick produced below back into an unescaped backtick,
@@ -221,9 +227,6 @@ const generateTransformCssToEsm = (
 
     appendStyleFactory(s, results);
     s.append(`module.exports = ${results.defaultVarName};`);
-    if (input.sourceMap) {
-      s.append(`\nmodule.exports.sourceMap = ${JSON.stringify(results.styleSourceMap) ?? 'undefined'};`);
-    }
   } else {
     // ESM
     if (input.addTagTransformers) {
@@ -235,9 +238,6 @@ const generateTransformCssToEsm = (
 
     appendStyleFactory(s, results);
     s.append(`export default ${results.defaultVarName};`);
-    if (input.sourceMap) {
-      s.append(`\nexport const sourceMap = ${JSON.stringify(results.styleSourceMap) ?? 'undefined'};`);
-    }
   }
 
   results.output = s.toString();
@@ -251,9 +251,6 @@ const appendStyleFactory = (output: MagicString, results: d.TransformCssToEsmOut
   });
   output.append(`\`${results.styleText}\`;\n`);
 };
-
-const sourceMapToDataUrl = (sourceMap: d.SourceMap) =>
-  `data:application/json;charset=utf-8;base64,${Buffer.from(JSON.stringify(sourceMap)).toString('base64')}`;
 
 const parseSourceMap = (map?: d.SourceMap | string) => {
   if (typeof map === 'string') {

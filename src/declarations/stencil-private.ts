@@ -236,6 +236,7 @@ export interface BuildCtx {
   bundleBuildCount: number;
   collections: CollectionCompilerMeta[];
   compilerCtx: CompilerCtx;
+  sourceMapsByTag: Map<string, Map<string, Record<string, string>>>;
   esmBrowserComponentBundle: ReadonlyArray<BundleModule>;
   esmComponentBundle: ReadonlyArray<BundleModule>;
   es5ComponentBundle: ReadonlyArray<BundleModule>;
@@ -394,6 +395,7 @@ export interface RollupChunkResult {
   isIndex: boolean;
   isBrowserLoader: boolean;
   imports: string[];
+  sourceMapsByMode: Map<string, string[]>;
   moduleFormat: ModuleFormat;
   map?: RollupSourceMap;
 }
@@ -981,13 +983,7 @@ export interface ComponentConstructor {
   deserializers?: ComponentConstructorChangeHandlers;
 }
 
-export interface StyleSourceMapSegment {
-  map: string;
-  length: number;
-}
-
-export type StyleSourceMap = string | StyleSourceMapSegment;
-export type StyleSourceMapValue = StyleSourceMap | StyleSourceMapValue[];
+export type StyleSourceMapValue = string | string[];
 
 /**
  * A mapping from class member names to a list of methods which are watching
@@ -2237,6 +2233,8 @@ export interface TransformCssToEsmInput {
   docs?: boolean;
   autoprefixer?: any;
   styleImportData?: string;
+  rootDir?: string;
+  namespace?: string;
 }
 
 export interface TransformCssToEsmOutput {
@@ -2880,3 +2878,5 @@ export interface TelemetryConfig {
   'telemetry.stencil'?: boolean;
   'tokens.telemetry'?: string;
 }
+
+export type Format = 'es' | 'cjs' | 'system';

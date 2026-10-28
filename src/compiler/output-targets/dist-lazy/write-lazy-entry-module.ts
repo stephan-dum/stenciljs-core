@@ -1,3 +1,4 @@
+import { FsWriteResults } from '@stencil/core/compiler';
 import { getSourceMappingUrlForEndOfFile, join } from '@utils';
 
 import type * as d from '../../../declarations';
@@ -8,10 +9,9 @@ export const writeLazyModule = async (
   destinations: string[],
   code: string,
   sourceMap: d.SourceMap,
-  rollupResult?: d.RollupChunkResult,
+  rollupResult: d.RollupChunkResult,
+  format: d.Format,
 ): Promise<d.BundleModuleOutput> => {
-  // code = replaceStylePlaceholders(entryModule.cmps, modeName, code);
-
   const fileName = rollupResult.fileName;
   const bundleId = fileName.replace('.entry.js', '');
 
@@ -19,17 +19,32 @@ export const writeLazyModule = async (
     code = code + getSourceMappingUrlForEndOfFile(fileName);
   }
 
-  await Promise.all(
-    destinations.map((dst) => {
-      const jsPath = join(dst, fileName);
-      const mapPath = jsPath + '.map';
-      const writes: Promise<any>[] = [compilerCtx.fs.writeFile(jsPath, code, { outputTargetType })];
-      if (!!sourceMap) {
-        writes.push(compilerCtx.fs.writeFile(mapPath, JSON.stringify(sourceMap), { outputTargetType }));
-      }
-      return Promise.all(writes);
-    }),
-  );
+  const writes: Promise<FsWriteResults>[] = [];
+
+  for (const [mode, sourceMaps] of rollupResult.sourceMapsByMode.entries()) {
+    Object.values(sourceMaps).forEach((sourceMap, i) => {
+      const mapReference = `./${fileName}.${mode}.${i}.css.map`;
+
+      destinations.forEach((destination) => {
+        writes.push(compilerCtx.fs.writeFile(join(destination, mapReference), sourceMap));
+      });
+
+      const url = format === 'cjs' ? `'file://' + __filename` : 'import.meta.url';
+      const runtimeUrlExpression = `new URL('${mapReference}', ${url}).href`;
+      code = code.replace(`"__@SOURCE_MAP_${mode}_${i}@__"`, runtimeUrlExpression);
+    });
+  }
+
+  destinations.forEach((dst) => {
+    const jsPath = join(dst, fileName);
+    const mapPath = jsPath + '.map';
+    writes.push(compilerCtx.fs.writeFile(jsPath, code, { outputTargetType }));
+    if (!!sourceMap) {
+      writes.push(compilerCtx.fs.writeFile(mapPath, JSON.stringify(sourceMap), { outputTargetType }));
+    }
+  });
+
+  await Promise.all(writes);
 
   return {
     bundleId,

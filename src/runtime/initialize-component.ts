@@ -152,11 +152,7 @@ export const initializeComponent = async (
            * ```
            */
           style = Cstr.style;
-          if (
-            typeof Cstr.sourceMap === 'string' ||
-            Array.isArray(Cstr.sourceMap) ||
-            (Cstr.sourceMap && typeof Cstr.sourceMap === 'object' && 'map' in Cstr.sourceMap)
-          ) {
+          if (typeof Cstr.sourceMap === 'string' || Array.isArray(Cstr.sourceMap)) {
             sourceMap = Cstr.sourceMap as d.StyleSourceMapValue;
           }
         } else if (BUILD.mode && typeof Cstr.style !== 'string') {
@@ -177,10 +173,7 @@ export const initializeComponent = async (
             style = Cstr.style[hostRef.$modeName$];
             const modeSourceMaps = Cstr.sourceMap;
             sourceMap =
-              modeSourceMaps &&
-              typeof modeSourceMaps === 'object' &&
-              !Array.isArray(modeSourceMaps) &&
-              !('map' in modeSourceMaps)
+              modeSourceMaps && typeof modeSourceMaps === 'object' && !Array.isArray(modeSourceMaps)
                 ? modeSourceMaps[hostRef.$modeName$]
                 : undefined;
           }

@@ -84,6 +84,8 @@ export const optimizeModule = async (
       };
     }
 
+    minifyOpts.format ||= {};
+    minifyOpts.format.quote_style = 1;
     const compressOpts = minifyOpts.compress as CompressOptions;
     const mangleOptions = minifyOpts.mangle as MangleOptions;
 
@@ -102,7 +104,7 @@ export const optimizeModule = async (
         ...getTerserManglePropertiesConfig(),
       };
 
-      compressOpts.inline = 1;
+      compressOpts.inline = 2;
       compressOpts.unsafe = true;
       compressOpts.unsafe_undefined = true;
     }

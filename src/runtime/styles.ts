@@ -18,8 +18,6 @@ import { HYDRATED_STYLE_ID, NODE_TYPE, SLOT_FB_CSS } from './runtime-constants';
 export const rootAppliedStyles: d.RootAppliedStyleMap = /*@__PURE__*/ new WeakMap();
 const rootAppliedStyleSheets = /*@__PURE__*/ new WeakMap<object, Map<string, CSSStyleSheet[]>>();
 
-type StyleText = string | StyleText[];
-
 /**
  * Register the styles for a component by creating a stylesheet and then
  * registering it under the component's scope ID in a `WeakMap` for later use.
@@ -34,13 +32,13 @@ type StyleText = string | StyleText[];
  */
 export const registerStyle = (
   scopeId: string,
-  cssText: StyleText,
+  cssText: string | string[],
   allowCS: boolean,
   sourceMap?: d.StyleSourceMapValue,
 ) => {
   let style = styles.get(scopeId);
-  const cssTexts = flattenStyleText(cssText);
-  const sourceMaps = Array.isArray(cssText) ? flattenStyleSourceMaps(sourceMap) : [sourceMap];
+  const cssTexts = Array.isArray(cssText) ? cssText : [cssText];
+  const sourceMaps = Array.isArray(sourceMap) ? sourceMap : [sourceMap];
   const styleTexts = cssTexts.map((text, index) => appendStyleSourceMap(text, sourceMaps[index]));
   if (supportsConstructableStylesheets && allowCS) {
     if (styleTexts.length === 1) {
@@ -73,70 +71,12 @@ export const registerStyle = (
   styles.set(scopeId, style);
 };
 
-const flattenStyleText = (cssText: StyleText): string[] => {
-  // Keep this recursive to support the optional ES5 runtime without requiring Array.prototype.flat.
-  if (Array.isArray(cssText)) {
-    return cssText.reduce<string[]>((styles, text) => styles.concat(flattenStyleText(text)), []);
-  }
-  return [cssText];
-};
-
-const flattenStyleSourceMaps = (sourceMap: unknown): d.StyleSourceMap[] => {
-  if (Array.isArray(sourceMap)) {
-    return sourceMap.reduce<d.StyleSourceMap[]>(
-      (sourceMaps, map) => sourceMaps.concat(flattenStyleSourceMaps(map)),
-      [],
-    );
-  }
-  return sourceMap ? [sourceMap as d.StyleSourceMap] : [];
-};
-
-export const appendStyleSourceMap = (styleText: string, sourceMap?: d.StyleSourceMapValue) => {
+export const appendStyleSourceMap = (styleText: string, sourceMap: string) => {
   if (!sourceMap) {
     return styleText;
   }
   const withoutSourceMap = styleText.replace(/\s*\/\*[#@]\s*sourceMappingURL=[^*]*\*\/\s*$/i, '');
-  const sourceMaps = flattenStyleSourceMaps(sourceMap);
-  const indexMap = createStyleSourceMapIndex(sourceMaps);
-  if (indexMap) {
-    return `${withoutSourceMap}\n/*# sourceMappingURL=${indexMap} */`;
-  }
-  return `${withoutSourceMap}${sourceMaps
-    .map((map) => `\n/*# sourceMappingURL=${typeof map === 'string' ? map : map.map} */`)
-    .join('')}`;
-};
-
-const createStyleSourceMapIndex = (sourceMaps: d.StyleSourceMap[]) => {
-  if (sourceMaps.length < 2 || sourceMaps.some((sourceMap) => typeof sourceMap === 'string')) {
-    return null;
-  }
-
-  const sections = [];
-  let column = 0;
-  for (const sourceMap of sourceMaps) {
-    const map = decodeInlineSourceMap((sourceMap as d.StyleSourceMapSegment).map);
-    if (!map) {
-      return null;
-    }
-    sections.push({ offset: { line: 0, column }, map });
-    column += (sourceMap as d.StyleSourceMapSegment).length;
-  }
-
-  return `data:application/json,${encodeURIComponent(JSON.stringify({ version: 3, sections }))}`;
-};
-
-const decodeInlineSourceMap = (sourceMap: string) => {
-  const match = sourceMap.match(/^data:application\/json[^,]*,(.*)$/i);
-  if (!match) {
-    return null;
-  }
-  try {
-    const encoded = match[1];
-    const header = match[0].slice(0, match[0].indexOf(','));
-    return JSON.parse(/;base64/i.test(header) ? atob(encoded) : decodeURIComponent(encoded));
-  } catch (e) {
-    return null;
-  }
+  return withoutSourceMap + `\n/*# sourceMappingURL=${sourceMap} */`;
 };
 
 /**

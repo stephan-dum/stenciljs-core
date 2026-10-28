@@ -26,7 +26,7 @@ export const generateSystem = async (
       sourcemap: config.sourceMapJs,
       plugins: [lazyBundleIdPlugin(buildCtx, config, config.hashFileNames, '.system', true)],
     };
-    const results = await generateRollupOutput(rollupBuild, esmOpts, config, buildCtx.entryModules);
+    const results = await generateRollupOutput(rollupBuild, esmOpts, config, buildCtx);
     if (results != null) {
       const destinations = systemOutputs
         .map((o) => o.esmDir)
@@ -40,6 +40,7 @@ export const generateSystem = async (
         results,
         'es5',
         true,
+        'system',
       );
 
       await generateSystemLoaders(config, compilerCtx, results, systemOutputs);

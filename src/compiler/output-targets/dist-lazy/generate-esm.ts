@@ -26,7 +26,7 @@ export const generateEsm = async (
       plugins: [lazyBundleIdPlugin(buildCtx, config, false, '')],
     };
     const outputTargetType = esmOutputs[0].type;
-    const output = await generateRollupOutput(rollupBuild, esmOpts, config, buildCtx.entryModules);
+    const output = await generateRollupOutput(rollupBuild, esmOpts, config, buildCtx);
 
     if (output != null) {
       const es2017destinations = esmOutputs
@@ -41,6 +41,7 @@ export const generateEsm = async (
         output,
         'es2017',
         false,
+        'es',
       );
 
       const es5destinations = esmEs5Outputs
@@ -55,6 +56,7 @@ export const generateEsm = async (
         output,
         'es5',
         false,
+        'es',
       );
 
       if (config.buildEs5) {

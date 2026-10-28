@@ -31,7 +31,7 @@ export const generateCjs = async (
       esmOpts.dynamicImportInCjs = false;
     }
 
-    const results = await generateRollupOutput(rollupBuild, esmOpts, config, buildCtx.entryModules);
+    const results = await generateRollupOutput(rollupBuild, esmOpts, config, buildCtx);
     if (results != null) {
       const destinations = cjsOutputs
         .map((o) => o.cjsDir)
@@ -46,6 +46,7 @@ export const generateCjs = async (
         results,
         'es2017',
         false,
+        'cjs',
       );
 
       await generateShortcuts(compilerCtx, results, cjsOutputs);

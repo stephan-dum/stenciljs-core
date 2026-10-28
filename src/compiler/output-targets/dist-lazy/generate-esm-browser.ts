@@ -26,7 +26,7 @@ export const generateEsmBrowser = async (
       plugins: [lazyBundleIdPlugin(buildCtx, config, config.hashFileNames, '', true)],
     };
 
-    const output = await generateRollupOutput(rollupBuild, esmOpts, config, buildCtx.entryModules);
+    const output = await generateRollupOutput(rollupBuild, esmOpts, config, buildCtx);
 
     if (output != null) {
       const es2017destinations = esmOutputs
@@ -41,6 +41,7 @@ export const generateEsmBrowser = async (
         output,
         'es2017',
         true,
+        'es',
       );
     }
   }

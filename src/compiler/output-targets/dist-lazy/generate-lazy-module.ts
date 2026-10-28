@@ -21,10 +21,12 @@ export const generateLazyModules = async (
   results: d.RollupResult[],
   sourceTarget: d.SourceTarget,
   isBrowserBuild: boolean,
+  format: d.Format,
 ): Promise<d.BundleModule[]> => {
   if (!Array.isArray(destinations) || destinations.length === 0) {
     return [];
   }
+
   const shouldMinify = !!(config.minifyJs && isBrowserBuild);
   const rollupResults = results.filter((r): r is d.RollupChunkResult => r.type === 'chunk');
   const entryComponentsResults = rollupResults.filter((rollupResult) => rollupResult.isComponent);
@@ -42,6 +44,7 @@ export const generateLazyModules = async (
         sourceTarget,
         shouldMinify,
         isBrowserBuild,
+        format,
       );
     }),
   );
@@ -188,6 +191,7 @@ const generateLazyEntryModule = async (
   sourceTarget: d.SourceTarget,
   shouldMinify: boolean,
   isBrowserBuild: boolean,
+  format: d.Format,
 ): Promise<d.BundleModule> => {
   const entryModule = buildCtx.entryModules.find((entryModule) => entryModule.entryKey === rollupResult.entryKey);
 
@@ -203,7 +207,15 @@ const generateLazyEntryModule = async (
     rollupResult.map,
   );
 
-  const output = await writeLazyModule(compilerCtx, outputTargetType, destinations, code, sourceMap, rollupResult);
+  const output = await writeLazyModule(
+    compilerCtx,
+    outputTargetType,
+    destinations,
+    code,
+    sourceMap,
+    rollupResult,
+    format,
+  );
 
   return {
     rollupResult,
