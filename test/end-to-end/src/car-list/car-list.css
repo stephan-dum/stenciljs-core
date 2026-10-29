@@ -1,3 +1,4 @@
+@import './car-list-imported.css';
 
 :host {
   display: block;
