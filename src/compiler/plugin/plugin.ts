@@ -4,6 +4,7 @@ import { basename } from 'path';
 
 import type * as d from '../../declarations';
 import { PluginCtx, PluginTransformResults } from '../../declarations';
+import { createCssSourceMap } from '../optimize/minify-css';
 import { parseCssImports } from '../style/css-imports';
 
 export const runPluginResolveId = async (pluginCtx: PluginCtx, importee: string) => {
@@ -128,6 +129,8 @@ export const runPluginTransforms = async (
       transformResults.code = cssParseResults.styleText;
       transformResults.dependencies = cssParseResults.imports;
     }
+
+    transformResults.map = createCssSourceMap(sourceText, transformResults.code, id);
   }
 
   for (const plugin of pluginCtx.config?.plugins ?? []) {
@@ -175,6 +178,7 @@ export const runPluginTransforms = async (
   buildCtx.diagnostics.push(...pluginCtx.diagnostics);
 
   if (!isRawCssFile) {
+    let cssParseResults;
     // sass precompiler just ran and converted @import "my.css" into @import url("my.css")
     // because of the ".css" extension. Sass did NOT concat the ".css" files into the output
     // but only updated it to use url() instead. Let's go ahead and concat the url() css
@@ -182,7 +186,7 @@ export const runPluginTransforms = async (
     // do this AFTER transformations on non-css files
     if (shouldParseCssDocs && cmp != null) {
       cmp.styleDocs = cmp.styleDocs || [];
-      const cssParseResults = await parseCssImports(
+      cssParseResults = await parseCssImports(
         config,
         compilerCtx,
         buildCtx,
@@ -191,12 +195,8 @@ export const runPluginTransforms = async (
         transformResults.code,
         cmp.styleDocs,
       );
-      transformResults.code = cssParseResults.styleText;
-      transformResults.dependencies.push(
-        ...getDependencySubset(cssParseResults.imports, transformResults.dependencies),
-      );
     } else {
-      const cssParseResults = await parseCssImports(
+      cssParseResults = await parseCssImports(
         config,
         compilerCtx,
         buildCtx,
@@ -204,11 +204,15 @@ export const runPluginTransforms = async (
         transformResults.id,
         transformResults.code,
       );
-      transformResults.code = cssParseResults.styleText;
-      transformResults.dependencies.push(
-        ...getDependencySubset(cssParseResults.imports, transformResults.dependencies),
-      );
     }
+
+    transformResults.map = mergePluginSourceMaps(
+      transformResults.map,
+      createCssSourceMap(transformResults.code, cssParseResults.styleText, id),
+    );
+
+    transformResults.code = cssParseResults.styleText;
+    transformResults.dependencies.push(...getDependencySubset(cssParseResults.imports, transformResults.dependencies));
   }
 
   return transformResults;
@@ -247,6 +251,7 @@ export const runPluginTransformsEsmImports = async (
     if (Array.isArray(cssParseResults.imports)) {
       transformResults.dependencies.push(...cssParseResults.imports);
     }
+    transformResults.map = createCssSourceMap(code, transformResults.code, id);
   }
 
   for (const plugin of pluginCtx.config?.plugins ?? []) {
@@ -304,6 +309,10 @@ export const runPluginTransformsEsmImports = async (
       id,
       transformResults.id,
       transformResults.code,
+    );
+    transformResults.map = mergePluginSourceMaps(
+      transformResults.map,
+      createCssSourceMap(transformResults.code, cssParseResults.styleText, id),
     );
     transformResults.code = cssParseResults.styleText;
     if (Array.isArray(cssParseResults.imports)) {
