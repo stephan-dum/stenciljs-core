@@ -21,7 +21,7 @@ export const generateGlobalStyles = async (
     await Promise.all(outputTargets.map((o) => writeGlobalStyle(compilerCtx, o.file, globalStyles)));
   }
 
-  return globalStyles;
+  return globalStyles?.css;
 };
 
 const buildGlobalStyles = async (config: d.ValidatedConfig, compilerCtx: d.CompilerCtx, buildCtx: d.BuildCtx) => {
@@ -70,11 +70,14 @@ const buildGlobalStyles = async (config: d.ValidatedConfig, compilerCtx: d.Compi
         true,
         transformMap,
       );
-      const optimizedCss =
-        typeof optimizedResult === 'string'
-          ? optimizedResult
-          : appendSourceMap(optimizedResult.output, optimizedResult.map);
-      compilerCtx.cachedGlobalStyle = optimizedCss;
+      const optimizedCss = typeof optimizedResult === 'string' ? optimizedResult : optimizedResult.output;
+
+      const map = typeof optimizedResult === 'string' ? undefined : optimizedResult.map;
+
+      compilerCtx.cachedGlobalStyle = {
+        css: optimizedCss + `\n/*# sourceMappingURL=${basename(config.fsNamespace)}.css.map */`,
+        map,
+      };
 
       if (Array.isArray(dependencies)) {
         const cssModuleImports = compilerCtx.cssModuleImports.get(globalStylePath) || [];
@@ -97,7 +100,7 @@ const buildGlobalStyles = async (config: d.ValidatedConfig, compilerCtx: d.Compi
         });
       }
 
-      return optimizedCss;
+      return compilerCtx.cachedGlobalStyle;
     }
   } catch (e: any) {
     const d = catchError(buildCtx.diagnostics, e);
@@ -108,37 +111,15 @@ const buildGlobalStyles = async (config: d.ValidatedConfig, compilerCtx: d.Compi
   return null;
 };
 
-const appendSourceMap = (css: string, sourceMap?: d.SourceMap) => {
-  if (!sourceMap) {
-    return css;
-  }
-  const sourceMapUrl = sourceMapToDataUrl(sourceMap);
-  return `${css}\n/*# sourceMappingURL=${sourceMapUrl} */`;
-};
+const writeGlobalStyle = async (
+  compilerCtx: d.CompilerCtx,
+  filePath: string,
+  globalStyle: { css: string; map?: string },
+) => {
+  await compilerCtx.fs.writeFile(filePath, globalStyle.css);
 
-const writeGlobalStyle = async (compilerCtx: d.CompilerCtx, filePath: string, css: string) => {
-  const external = externalizeSourceMap(css, filePath);
-  await compilerCtx.fs.writeFile(filePath, external.css);
-  if (external.map) {
-    await compilerCtx.fs.writeFile(`${filePath}.map`, JSON.stringify(external.map));
-  }
-};
-
-const externalizeSourceMap = (css: string, filePath: string) => {
-  const match = css.match(/\n\/\*# sourceMappingURL=data:application\/json;charset=utf-8;base64,([^*]+) \*\/$/);
-  if (!match || match.index == null) {
-    return { css, map: undefined };
-  }
-
-  try {
-    const map = JSON.parse(Buffer.from(match[1], 'base64').toString()) as d.SourceMap;
-    map.file = basename(filePath);
-    return {
-      css: `${css.slice(0, match.index)}\n/*# sourceMappingURL=${basename(filePath)}.map */`,
-      map,
-    };
-  } catch (e) {
-    return { css, map: undefined };
+  if (globalStyle.map) {
+    await compilerCtx.fs.writeFile(`${filePath}.map`, JSON.stringify(globalStyle.map));
   }
 };
 
@@ -175,7 +156,7 @@ const canSkipGlobalStyles = async (config: d.ValidatedConfig, compilerCtx: d.Com
     compilerCtx,
     buildCtx,
     config.globalStyle,
-    compilerCtx.cachedGlobalStyle,
+    compilerCtx.cachedGlobalStyle.css,
     [],
   );
   if (hasChangedImports) {
